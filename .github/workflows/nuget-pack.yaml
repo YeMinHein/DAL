@@ -1,7 +1,6 @@
 name: NuGet Pack & Upload to Google Drive
 
 on:
- workflow_dispatch:
   push:
     branches:
       - main
@@ -27,15 +26,17 @@ jobs:
     - name: Notify Google Chat - Success
       if: steps.nuget_pack.outcome == 'success'
       run: |
-  $body = @{ text = "✅ NuGet Pack Success: DAL.nupkg created." } | ConvertTo-Json
-  Invoke-RestMethod -Uri "${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}" -Method Post -ContentType 'application/json' -Body $body
+        curl -X POST -H "Content-Type: application/json" \
+        -d "{\"text\":\"✅ NuGet Pack Success: DAL.nupkg created.\"}" \
+        ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
 
     - name: Notify Google Chat - Failure
       if: steps.nuget_pack.outcome == 'failure'
       run: |
-  $body = @{ text = "❌ NuGet Pack Failed!\: DAL.nupkg created." } | ConvertTo-Json
-  Invoke-RestMethod -Uri "${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}" -Method Post -ContentType 'application/json' -Body $body
-     
+        curl -X POST -H "Content-Type: application/json" \
+        -d "{\"text\":\"❌ NuGet Pack Failed!\"}" \
+        ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
+
     - name: Upload to Google Drive
       if: steps.nuget_pack.outcome == 'success'
       uses: google-github-actions/upload-cloud-storage@v1

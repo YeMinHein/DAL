@@ -1,4 +1,4 @@
-name: NuGet Pack & Upload to Google Drive (.NET Framework 4.8.1)
+name: NuGet Pack & Upload to Google Drive
 
 on:
   push:

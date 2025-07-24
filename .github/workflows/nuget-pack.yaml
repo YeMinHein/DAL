@@ -34,7 +34,8 @@ jobs:
     - name: Notify Google Chat - Failure
       if: steps.nuget_pack.outcome == 'failure'
       run: |
-        $body = @{ text = "❌ NuGet Pack Failed! DAL.nupkg not created." } | ConvertTo-Json
+        $errorLog = Get-Content nuget_pack.log -Raw
+        $body = @{ text = "❌ DAL.nupkg creat Failed!\n```\n$errorLog\n```" } | ConvertTo-Json -Depth 10
         Invoke-RestMethod -Uri "${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}" -Method Post -ContentType 'application/json' -Body $body
 
     - name: Upload to Google Drive

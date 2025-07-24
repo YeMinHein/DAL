@@ -1,0 +1,46 @@
+name: NuGet Pack & Upload to Google Drive
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-upload:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v2
+
+    - name: Run nuget pack
+      id: nuget_pack
+      run: |
+        nuget spec DAL.csproj
+        nuget pack DAL.csproj -OutputDirectory ./nupkgs
+      continue-on-error: true
+
+    - name: Notify Google Chat - Success
+      if: steps.nuget_pack.outcome == 'success'
+      run: |
+        curl -X POST -H "Content-Type: application/json" \
+        -d "{\"text\":\"✅ NuGet Pack Success: DAL.nupkg created.\"}" \
+        ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
+
+    - name: Notify Google Chat - Failure
+      if: steps.nuget_pack.outcome == 'failure'
+      run: |
+        curl -X POST -H "Content-Type: application/json" \
+        -d "{\"text\":\"❌ NuGet Pack Failed!\"}" \
+        ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
+
+    - name: Upload to Google Drive
+      if: steps.nuget_pack.outcome == 'success'
+      uses: google-github-actions/upload-cloud-storage@v1
+      with:
+        credentials_json: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON }}
+        path: ./nupkgs/*.nupkg
+        destination: drive://1Ulvq7i1JIQqmBQZiTm0NLkTnhyD6avBr/

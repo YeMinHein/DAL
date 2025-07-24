@@ -1,0 +1,169 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{E09CF9CF-23E3-4FF3-85EC-5898FF5ED24E}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>DAL</RootNamespace>
+    <AssemblyName>DAL</AssemblyName>
+    <TargetFrameworkVersion>v4.8.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+    <SccProjectName>SAK</SccProjectName>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccProvider>SAK</SccProvider>
+    <LangVersion>Latest</LangVersion>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="BOL, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\BOL.1.0.0\lib\net481\BOL.dll</HintPath>
+    </Reference>
+    <Reference Include="Dapper.StrongName">
+      <HintPath>..\..\..\Spectrum_RequireDll_2\DLLs\DAL\bin\Debug\Dapper.StrongName.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Web.Mvc">
+      <HintPath>..\..\..\Spectrum_RequireDll_2\ReferralANDAPI\Referral\System.Web.Mvc.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="API\dal_API_AppAuthentication.cs" />
+    <Compile Include="API\dal_API_AppVersionTracker.cs" />
+    <Compile Include="API\dal_API_AYA.cs" />
+    <Compile Include="API\dal_API_BSS.cs" />
+    <Compile Include="API\dal_API_BSS_CustomerInfo.cs" />
+    <Compile Include="API\dal_API_BSS_PayHistory.cs" />
+    <Compile Include="API\dal_API_CB.cs" />
+    <Compile Include="API\dal_API_CF_CollectForm.cs" />
+    <Compile Include="API\dal_API_CustInfo.cs" />
+    <Compile Include="API\dal_API_Customer.cs" />
+    <Compile Include="API\dal_API_Evo.cs" />
+    <Compile Include="API\dal_API_Evo_EOD.cs" />
+    <Compile Include="API\dal_API_Evo_Noti.cs" />
+    <Compile Include="API\dal_API_Evo_Subscriber.cs" />
+    <Compile Include="API\dal_API_KBZ_CallbackRequest.cs" />
+    <Compile Include="API\dal_API_KBZ_OrderInfo.cs" />
+    <Compile Include="API\dal_API_KBZ_Precreate.cs" />
+    <Compile Include="API\dal_API_KBZ_PWA.cs" />
+    <Compile Include="API\dal_API_KBZ_QueryOrder.cs" />
+    <Compile Include="API\dal_API_KBZ_Refund.cs" />
+    <Compile Include="API\dal_API_Logger.cs" />
+    <Compile Include="API\dal_API_LTE.cs" />
+    <Compile Include="API\dal_API_MCB.cs" />
+    <Compile Include="API\dal_API_Merchant.cs" />
+    <Compile Include="API\dal_API_MobileApp.cs" />
+    <Compile Include="API\dal_API_SystemParam.cs" />
+    <Compile Include="API\dal_API_Token.cs" />
+    <Compile Include="API\dal_API_UserAuthentication.cs" />
+    <Compile Include="API\dal_API_WM.cs" />
+    <Compile Include="API\dal_API_WM_QueryOrder.cs" />
+    <Compile Include="API\dal_API_XWF.cs" />
+    <Compile Include="CF\dal_CF_CollectForm_List.cs" />
+    <Compile Include="CF\dal_CF_CollectForm_Staff.cs" />
+    <Compile Include="CNP\dal_CNP_Subscription.cs" />
+    <Compile Include="dal_ConfigManager.cs" />
+    <Compile Include="dal_Logger.cs" />
+    <Compile Include="DB\dal_DB_Dashboard1.cs" />
+    <Compile Include="DD\dal_DD_ImageSetup.cs" />
+    <Compile Include="DD\dal_DD_RegionDetail.cs" />
+    <Compile Include="DD\dal_DD_RegionSetup.cs" />
+    <Compile Include="DPSI\dal_DPSI_Dashboard1.cs" />
+    <Compile Include="DPSI\dal_DPSI_SAForm.cs" />
+    <Compile Include="EMN\dal_EMN_History.cs" />
+    <Compile Include="EMN\dal_EMN_Send.cs" />
+    <Compile Include="EMN\dal_EMN_Template.cs" />
+    <Compile Include="EvoNoti\dal_Evo_NOTI_Template.cs" />
+    <Compile Include="General\dal_General.cs" />
+    <Compile Include="GM\dal_GM_SysParams.cs" />
+    <Compile Include="GM\dal_ServiceBasePlan.cs" />
+    <Compile Include="GT\dal_GT_Team.cs" />
+    <Compile Include="HB\dal_HB_Setup.cs" />
+    <Compile Include="LLK\dal_LLKSetup.cs" />
+    <Compile Include="LLK\dal_LLK_LaLaKyiList.cs" />
+    <Compile Include="LSM\dal_LSM.cs" />
+    <Compile Include="MobileView\dal_MobileView.cs" />
+    <Compile Include="NOTI\dal_NOTI_EventBillGeneration.cs" />
+    <Compile Include="NOTI\dal_NOTI_Log.cs" />
+    <Compile Include="NOTI\dal_NOTI_Send.cs" />
+    <Compile Include="NOTI\dal_NOTI_Template.cs" />
+    <Compile Include="PAY\dal_PaymentSetting.cs" />
+    <Compile Include="PAY\dal_PAY_History.cs" />
+    <Compile Include="PAY\dal_PAY_PaymentType.cs" />
+    <Compile Include="PAY\dal_PAY_Refund.cs" />
+    <Compile Include="POS\dal_POS_Data.cs" />
+    <Compile Include="PROMO\dal_Promo_Offer_Setup.cs" />
+    <Compile Include="PROMO\dal_Promo_Setup.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Referrals\dal_Referrals.cs" />
+    <Compile Include="Resources\dal_Resources_Blog.cs" />
+    <Compile Include="Resources\dal_Resources_EventPromo.cs" />
+    <Compile Include="Resources\dal_Resources_FAQ.cs" />
+    <Compile Include="Resources\dal_Resources_HowTo.cs" />
+    <Compile Include="Resources\dal_Resources_SuccessStories.cs" />
+    <Compile Include="SMS\dal_SMS_History.cs" />
+    <Compile Include="SMS\dal_SMS_Send.cs" />
+    <Compile Include="SMS\dal_SMS_Template.cs" />
+    <Compile Include="StaffDetails\dal_StaffDetails.cs" />
+    <Compile Include="SVM\dal_SVM_ChangeAddressForm.cs" />
+    <Compile Include="SVM\dal_SVM_DisableStatusForm.cs" />
+    <Compile Include="SVM\dal_SVM_PlanChangeForm.cs" />
+    <Compile Include="SVM\dal_SVM_ReactivateForm.cs" />
+    <Compile Include="URM\dal_URM_RoleMenu.cs" />
+    <Compile Include="URM\dal_URM_Role_Setup.cs" />
+    <Compile Include="URM\dal_URM_Setup.cs" />
+    <Compile Include="WDM\dal_WDM_AdvancePayment.cs" />
+    <Compile Include="WDM\dal_WDM_BS_SAForm.cs" />
+    <Compile Include="WDM\dal_WDM_Complaint.cs" />
+    <Compile Include="WDM\dal_WDM_ComplaintSetup.cs" />
+    <Compile Include="WDM\dal_WDM_GuestContactUs.cs" />
+    <Compile Include="WDM\dal_WDM_Interest.cs" />
+    <Compile Include="WDM\dal_WDM_LeadEntryForm.cs" />
+    <Compile Include="WDM\dal_WDM_LimitCashCollection.cs" />
+    <Compile Include="WDM\dal_WDM_RegionDetail.cs" />
+    <Compile Include="WDM\dal_WDM_RegionSetup.cs" />
+    <Compile Include="WDM\dal_WDM_SAForm.cs" />
+    <Compile Include="WebNoti\dal_WebNOTI_EventBillGeneration.cs" />
+    <Compile Include="WebNoti\dal_WebNOTI_Log.cs" />
+    <Compile Include="WebNoti\dal_WebNOTI_Send.cs" />
+    <Compile Include="WebNoti\dal_WebNOTI_Template.cs" />
+    <Compile Include="WebNoti\WebNoti_FirebaseService.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

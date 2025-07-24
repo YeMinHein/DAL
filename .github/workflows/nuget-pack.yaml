@@ -18,8 +18,6 @@ jobs:
     # 2. Setup NuGet
     - name: Setup NuGet
       uses: NuGet/setup-nuget@v2
-      with:
-        nuget-version: '1.x'  # Explicit version for stability
 
     # 3. Setup MSBuild (required for .NET Framework)
     - name: Setup MSBuild

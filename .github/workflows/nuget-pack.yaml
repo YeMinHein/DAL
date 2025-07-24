@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:  # Allows manual trigger from GitHub UI
+  workflow_dispatch:
 
 jobs:
   build-and-upload:
@@ -18,25 +18,34 @@ jobs:
       uses: NuGet/setup-nuget@v2
 
     - name: Run nuget spec
+      shell: pwsh
       run: nuget spec DAL.csproj
 
     - name: Run nuget pack
       id: nuget_pack
-      run: nuget pack DAL.csproj -OutputDirectory ./nupkgs
-      continue-on-error: true
+      shell: pwsh
+      run: |
+        nuget pack DAL.csproj -OutputDirectory ./nupkgs 2>&1 | Tee-Object -FilePath nuget_pack.log
+        if ($LASTEXITCODE -ne 0) { exit 1 }
 
     - name: Notify Google Chat - Success
       if: steps.nuget_pack.outcome == 'success'
+      shell: pwsh
       run: |
-        $body = @{ text = "✅ NuGet Pack Success: DAL.nupkg created." } | ConvertTo-Json
+        $body = @{ text = "✅ NuGet Pack Success: DAL.nupkg created." } | ConvertTo-Json -Depth 10
         Invoke-RestMethod -Uri "${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}" -Method Post -ContentType 'application/json' -Body $body
 
     - name: Notify Google Chat - Failure
       if: steps.nuget_pack.outcome == 'failure'
+      shell: pwsh
       run: |
         $errorLog = Get-Content nuget_pack.log -Raw
-        $body = @{ text = "❌ DAL.nupkg creat Failed!\n```\n$errorLog\n```" } | ConvertTo-Json -Depth 10
+        if ($errorLog.Length -gt 3500) {
+          $errorLog = $errorLog.Substring(0, 3500) + "`n... (truncated)"
+        }
+        $body = @{ text = "❌ DAL.nupkg Creation Failed!\n```\n$errorLog\n```" } | ConvertTo-Json -Depth 10
         Invoke-RestMethod -Uri "${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}" -Method Post -ContentType 'application/json' -Body $body
+
 
     - name: Upload to Google Drive
       if: steps.nuget_pack.outcome == 'success'

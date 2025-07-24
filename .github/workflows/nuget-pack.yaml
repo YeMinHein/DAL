@@ -1,4 +1,4 @@
-name: NuGet Pack & Upload to Google Drive (.NET Framework 4.8.1)
+name: NuGet Pack & Upload to Google Drive
 
 on:
   push:
@@ -11,32 +11,73 @@ jobs:
     runs-on: windows-latest
 
     steps:
+    # 1. Checkout code
     - name: Checkout Repository
       uses: actions/checkout@v4
 
+    # 2. Setup NuGet
     - name: Setup NuGet
       uses: NuGet/setup-nuget@v2
+      with:
+        nuget-version: '1.x'  # Explicit version for stability
 
-    - name: Run nuget pack
+    # 3. Setup MSBuild (required for .NET Framework)
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v1
+
+    # 4. Restore NuGet packages (solution level)
+    - name: Restore NuGet packages
+      run: nuget restore DAL.sln
+
+    # 5. Build solution in Release mode
+    - name: Build solution (Release)
+      run: msbuild DAL.sln /p:Configuration=Release /p:Platform="Any CPU" /p:DeployOnBuild=true /p:PublishProfile=FolderProfile
+
+    # 6. Debugging: Verify DLL was created
+    - name: Verify build outputs
+      run: |
+        echo "Checking for built DLL..."
+        dir /s /b bin\Release\DAL.dll
+        if not exist "bin\Release\DAL.dll" (
+          echo "Error: DAL.dll was not built!"
+          exit 1
+        )
+
+    # 7. Create NuGet package
+    - name: Create NuGet package
       id: nuget_pack
       run: |
-        nuget spec DAL.csproj
-        nuget pack DAL.csproj -OutputDirectory ./nupkgs
-      continue-on-error: true
-    
+        nuget pack DAL.csproj `
+          -OutputDirectory ./nupkgs `
+          -Properties "Configuration=Release" `
+          -Version 1.0.${{ github.run_number }}  # Auto-increment version
+      continue-on-error: false
+
+    # 8. Success notification
     - name: Notify Google Chat - Success
       if: steps.nuget_pack.outcome == 'success'
       run: |
-        $body = @{ text = "✅ NuGet Pack Success: DAL.nupkg created." } | ConvertTo-Json -Depth 10
-        Invoke-RestMethod -Uri "${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}" -Method Post -ContentType 'application/json' -Body $body
+        $package = Get-ChildItem ./nupkgs/*.nupkg | Select-Object -First 1
+        $body = @{
+          text = "✅ NuGet Pack Success! 
+          Package: $($package.Name)
+          Version: 1.0.${{ github.run_number }}
+          Branch: ${{ github.ref }}"
+        } | ConvertTo-Json -Depth 10
+        Invoke-RestMethod -Uri "${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}" -Method Post -Body $body
 
+    # 9. Failure notification
     - name: Notify Google Chat - Failure
       if: steps.nuget_pack.outcome == 'failure'
       run: |
-        $body = @{ text = "❌ DAL.nupkg Creation Failed!" } | ConvertTo-Json -Depth 10
-        Invoke-RestMethod -Uri "${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}" -Method Post -ContentType 'application/json' -Body $body
+        $body = @{
+          text = "❌ NuGet Pack Failed!
+          Branch: ${{ github.ref }}
+          Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        } | ConvertTo-Json -Depth 10
+        Invoke-RestMethod -Uri "${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}" -Method Post -Body $body
 
-
+    # 10. Upload to Google Drive
     - name: Upload to Google Drive
       if: steps.nuget_pack.outcome == 'success'
       uses: google-github-actions/upload-cloud-storage@v1
@@ -44,3 +85,4 @@ jobs:
         credentials_json: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON }}
         path: ./nupkgs/*.nupkg
         destination: drive://1jN23YIU6aclDiZhFZliCLxzdW76-39fo/
+        overwrite: true

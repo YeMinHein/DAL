@@ -16,12 +16,7 @@ jobs:
 
     - name: Setup NuGet
       uses: NuGet/setup-nuget@v2
-
-    - name: Build DAL Project
-      shell: pwsh
-      run: |
-        msbuild DAL.csproj /p:Configuration=Release
-
+    
     - name: Run nuget pack
       id: nuget_pack
       shell: pwsh
@@ -29,6 +24,10 @@ jobs:
         nuget pack DAL.csproj -OutputDirectory ./nupkgs 2>&1 | Tee-Object -FilePath nuget_pack.log
         if ($LASTEXITCODE -ne 0) { exit 1 }
 
+    - name: Build DAL Project
+      shell: pwsh
+      run: |
+        msbuild DAL.csproj /p:Configuration=Release
 
     - name: Notify Google Chat - Success
       if: steps.nuget_pack.outcome == 'success'

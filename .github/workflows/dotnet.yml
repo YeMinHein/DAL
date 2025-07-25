@@ -1,0 +1,53 @@
+name: NuGet Pack & Upload to Google Drive
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-upload:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v2
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v1
+
+    - name: Restore NuGet packages
+      run: nuget restore DAL.sln
+
+    - name: Build project (Release)
+      run: msbuild DAL.csproj /p:Configuration=Release /p:Platform="Any CPU"
+
+    - name: Run nuget pack
+      id: nuget_pack
+      run: |
+        nuget pack DAL.csproj -OutputDirectory ./nupkgs -Properties Configuration=Release
+      continue-on-error: true
+    
+    - name: Notify Google Chat - Success
+      if: steps.nuget_pack.outcome == 'success'
+      run: |
+        $body = @{ text = "✅ NuGet Pack Success: DAL.nupkg created." } | ConvertTo-Json -Depth 10
+        Invoke-RestMethod -Uri "${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}" -Method Post -ContentType 'application/json' -Body $body
+
+    - name: Notify Google Chat - Failure
+      if: steps.nuget_pack.outcome == 'failure'
+      run: |
+        $body = @{ text = "❌ DAL.nupkg Creation Failed!" } | ConvertTo-Json -Depth 10
+        Invoke-RestMethod -Uri "${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}" -Method Post -ContentType 'application/json' -Body $body
+
+    - name: Upload to Google Drive
+      if: steps.nuget_pack.outcome == 'success'
+      uses: google-github-actions/upload-cloud-storage@v1
+      with:
+        credentials_json: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON }}
+        path: ./nupkgs/*.nupkg
+        destination: drive://1jN23YIU6aclDiZhFZliCLxzdW76-39fo/

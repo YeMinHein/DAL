@@ -1,10 +1,9 @@
-name: NuGet Pack & Upload to Google Drive (.NET Framework 4.8.1)
-
+name: NuGet Pack & Upload to Google Drive
 on:
+  workflow_dispatch:
   push:
     branches:
       - main  # or 'master'
-    workflow_dispatch:
     paths:
       - 'DAL/**'
       - '.github/workflows/nuget-pack.yml'

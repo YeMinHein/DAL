@@ -28,9 +28,16 @@ jobs:
 
     - name: Calculate Version (Auto Increment)
       id: versioning
+      shell: pwsh
       run: |
-        $lastTag = git describe --tags --abbrev=0
-        Write-Output "Last Tag: $lastTag"
+        $lastTag = git describe --tags --abbrev=0 2>$null
+
+        if ([string]::IsNullOrEmpty($lastTag)) {
+            Write-Output "No tags found. Defaulting to v1.0.0"
+            $lastTag = "v1.0.0"
+         }  else {
+            Write-Output "Last Tag: $lastTag"
+         }
 
         $versionParts = $lastTag.TrimStart('v').Split('.')
         $major = [int]$versionParts[0]
@@ -39,7 +46,6 @@ jobs:
 
         $newVersion = "$major.$minor.$patch"
         Write-Output "New Version: $newVersion"
-
         echo "nuget_version=$newVersion" >> $env:GITHUB_ENV
 
     - name: Restore NuGet Packages

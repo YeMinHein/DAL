@@ -10,6 +10,10 @@ jobs:
   build-and-upload:
     runs-on: windows-latest
 
+    env:
+      PROJECT_NAME: 'DAL'
+      GOOGLE_CHAT_WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
+
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
@@ -20,42 +24,67 @@ jobs:
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v1
 
-    - name: Restore NuGet packages
-      id: Restore_nuget_pack
+    - name: Restore NuGet Packages
+      id: restore_nuget
       run: nuget restore DAL.sln
-      continue-on-error: true
-    
-    - name: Notify Google Chat - Failure
-      if: steps.Restore_nuget_pack.outcome == 'failure'
+      shell: pwsh
+
+    - name: Notify Google Chat - Restore Failure
+      if: failure()
       run: |
-        $body = @{ text = "❌ Restore NuGet packages Failed!" } | ConvertTo-Json -Depth 10
-        Invoke-RestMethod -Uri "${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}" -Method Post -ContentType 'application/json' -Body $body
+        $body = @{ text = "❌ Restore NuGet Packages Failed for $env:PROJECT_NAME" } | ConvertTo-Json -Depth 10
+        Invoke-RestMethod -Uri "$env:GOOGLE_CHAT_WEBHOOK_URL" -Method Post -ContentType 'application/json' -Body $body
+      shell: pwsh
 
-    - name: Build project (Release)
-      run: msbuild DAL.csproj /p:Configuration=Release /p:Platform="Any CPU"
+    - name: Build Solution (Release)
+      id: build_solution
+      run: msbuild DAL.sln /p:Configuration=Release /p:Platform="Any CPU"
+      shell: pwsh
 
-    - name: Run nuget pack
+    - name: Notify Google Chat - Build Failure
+      if: failure()
+      run: |
+        $body = @{ text = "❌ Build Failed for $env:PROJECT_NAME" } | ConvertTo-Json -Depth 10
+        Invoke-RestMethod -Uri "$env:GOOGLE_CHAT_WEBHOOK_URL" -Method Post -ContentType 'application/json' -Body $body
+      shell: pwsh
+
+    - name: Pack NuGet Package
       id: nuget_pack
-      run: |
-        nuget pack DAL.csproj -OutputDirectory ./nupkgs -Properties Configuration=Release
-      continue-on-error: true
-    
-    - name: Notify Google Chat - Success
-      if: steps.nuget_pack.outcome == 'success'
-      run: |
-        $body = @{ text = "✅ NuGet Pack Success: DAL.nupkg created." } | ConvertTo-Json -Depth 10
-        Invoke-RestMethod -Uri "${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}" -Method Post -ContentType 'application/json' -Body $body
+      run: nuget pack DAL.csproj -OutputDirectory ./nupkgs -Properties Configuration=Release
+      shell: pwsh
 
-    - name: Notify Google Chat - Failure
-      if: steps.nuget_pack.outcome == 'failure'
+    - name: Notify Google Chat - Pack Success
+      if: success()
       run: |
-        $body = @{ text = "❌ DAL.nupkg Creation Failed!" } | ConvertTo-Json -Depth 10
-        Invoke-RestMethod -Uri "${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}" -Method Post -ContentType 'application/json' -Body $body
+        $body = @{ text = "✅ NuGet Pack Success: $env:PROJECT_NAME.nupkg created." } | ConvertTo-Json -Depth 10
+        Invoke-RestMethod -Uri "$env:GOOGLE_CHAT_WEBHOOK_URL" -Method Post -ContentType 'application/json' -Body $body
+      shell: pwsh
+
+    - name: Notify Google Chat - Pack Failure
+      if: failure()
+      run: |
+        $body = @{ text = "❌ NuGet Pack Failed for $env:PROJECT_NAME" } | ConvertTo-Json -Depth 10
+        Invoke-RestMethod -Uri "$env:GOOGLE_CHAT_WEBHOOK_URL" -Method Post -ContentType 'application/json' -Body $body
+      shell: pwsh
 
     - name: Upload to Google Drive
-      if: steps.nuget_pack.outcome == 'success'
-      uses: google-github-actions/upload-cloud-storage@v1
+      if: success()
+      uses: Jodebu/upload-to-google-drive@v1
       with:
-        credentials_json: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON }}
-        path: ./nupkgs/*.nupkg
-        destination: drive://1jN23YIU6aclDiZhFZliCLxzdW76-39fo/
+        target: './nupkgs'
+        credentials: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON }}
+        folderId: '1jN23YIU6aclDiZhFZliCLxzdW76-39fo'
+
+    - name: Notify Google Chat - Upload Success
+      if: success()
+      run: |
+        $body = @{ text = "☁️ Upload to Google Drive Successful!\n\n🔗 https://drive.google.com/drive/u/0/folders/1jN23YIU6aclDiZhFZliCLxzdW76-39fo" } | ConvertTo-Json -Depth 10
+        Invoke-RestMethod -Uri "$env:GOOGLE_CHAT_WEBHOOK_URL" -Method Post -ContentType 'application/json' -Body $body
+      shell: pwsh
+
+    - name: Notify Google Chat - Pipeline Failed
+      if: failure()
+      run: |
+        $body = @{ text = "❌ Pipeline Failed for $env:PROJECT_NAME.\nPlease check GitHub Actions log." } | ConvertTo-Json -Depth 10
+        Invoke-RestMethod -Uri "$env:GOOGLE_CHAT_WEBHOOK_URL" -Method Post -ContentType 'application/json' -Body $body
+      shell: pwsh

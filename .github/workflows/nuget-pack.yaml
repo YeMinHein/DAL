@@ -1,91 +1,140 @@
 name: NuGet Pack & Upload to Google Drive
+
 on:
-  workflow_dispatch:
+workflow_dispatch:
   push:
     branches:
-      - main  # or 'master'
-    paths:
-      - 'DAL/**'
-      - '.github/workflows/nuget-pack.yml'
-
-env:
-  NUGET_OUTPUT: ./nupkgs
-  PACKAGE_VERSION: ${{ github.run_number }}.0.0  # Using run number as version
+      - main
 
 jobs:
-  build-pack-publish:
+  build-pack-upload:
     runs-on: windows-latest
 
+    env:
+      GOOGLE_CHAT_WEBHOOK_URL: 'https://chat.googleapis.com/v1/spaces/AAQARUbP3tk/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=XFnT7KilbDY9M5833YBri2f3UZOBLV3_E0GAC45L4AE'
+      PROJECT_NAME: 'DAL'
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout Code
+      uses: actions/checkout@v4
 
-      - name: Setup NuGet
-        uses: NuGet/setup-nuget@v2
-        with:
-          nuget-version: latest
+    - name: Setup NuGet
+      run: |
+        nuget help
+      shell: pwsh
+      continue-on-error: false
 
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
-        with:
-          vs-version: 'latest'
+    - name: Notify Success - Setup NuGet
+      if: success()
+      run: |
+        $body = @{
+          text = "✅ NuGet Setup Completed!
+          Project: $env:PROJECT_NAME
+          Branch: ${{ github.ref_name }}
+          Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        } | ConvertTo-Json -Depth 10
+        Invoke-RestMethod -Uri "$env:GOOGLE_CHAT_WEBHOOK_URL" -Method Post -Body $body
+      shell: pwsh
 
-      - name: Restore NuGet packages
-        run: nuget restore DAL/DAL.csproj
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+      with:
+        vs-version: 'latest'
+      continue-on-error: false
 
-      - name: Build the Project
-        run: msbuild DAL/DAL.csproj /p:Configuration=Release
+    - name: Notify Success - Setup MSBuild
+      if: success()
+      run: |
+        $body = @{
+          text = "✅ MSBuild Setup Completed!
+          Project: $env:PROJECT_NAME
+          Branch: ${{ github.ref_name }}
+          Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        } | ConvertTo-Json -Depth 10
+        Invoke-RestMethod -Uri "$env:GOOGLE_CHAT_WEBHOOK_URL" -Method Post -Body $body
+      shell: pwsh
 
-      - name: Create output directory
-        run: mkdir ${{ env.NUGET_OUTPUT }}
+    - name: Restore NuGet Packages
+      run: nuget restore YourSolution.sln
+      shell: pwsh
+      continue-on-error: false
 
-      - name: Pack the Project
-        id: nuget_pack
-        run: |
-          nuget pack DAL/DAL.csproj -OutputDirectory ${{ env.NUGET_OUTPUT }} -Properties Configuration=Release -Version ${{ env.PACKAGE_VERSION }}
-          if ($LASTEXITCODE -eq 0) {
-            Write-Output "::set-output name=status::success"
-          } else {
-            Write-Output "::set-output name=status::failure"
-            exit 1
-          }
+    - name: Notify Success - Restore NuGet
+      if: success()
+      run: |
+        $body = @{
+          text = "✅ NuGet Restore Completed!
+          Project: $env:PROJECT_NAME
+          Branch: ${{ github.ref_name }}
+          Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        } | ConvertTo-Json -Depth 10
+        Invoke-RestMethod -Uri "$env:GOOGLE_CHAT_WEBHOOK_URL" -Method Post -Body $body
+      shell: pwsh
 
-      # Success notification
-      - name: Notify Google Chat - Success
-        if: steps.nuget_pack.outcome == 'success'
-        run: |
-          $package = Get-ChildItem ${{ env.NUGET_OUTPUT }}/*.nupkg | Select-Object -First 1
-          $body = @{
-            text = "✅ NuGet Package Created Successfully!
-            Project: DAL
-            Version: ${{ env.PACKAGE_VERSION }}
-            Package: $($package.Name)
-            Size: $([math]::Round($package.Length/1KB, 2)) KB
-            Branch: ${{ github.ref_name }}
-            Commit: ${{ github.sha }}
-            Drive Link: https://drive.google.com/drive/u/0/folders/1Ulvq7i1JIQqmBQZiTm0NLkTnhyD6avBr"
-          } | ConvertTo-Json -Depth 10
-          Invoke-RestMethod -Uri "${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}" -Method Post -Body $body
+    - name: Build Solution
+      run: msbuild YourProject.csproj /p:Configuration=Release /p:Platform="Any CPU"
+      shell: pwsh
+      continue-on-error: false
 
-      # Failure notification
-      - name: Notify Google Chat - Failure
-        if: steps.nuget_pack.outcome == 'failure'
-        run: |
-          $body = @{
-            text = "❌ NuGet Package Creation Failed!
-            Project: DAL
-            Branch: ${{ github.ref_name }}
-            Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-            Error: Package restore or build failed"
-          } | ConvertTo-Json -Depth 10
-          Invoke-RestMethod -Uri "${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}" -Method Post -Body $body
+    - name: Notify Success - Build Solution
+      if: success()
+      run: |
+        $body = @{
+          text = "✅ Build Completed Successfully!
+          Project: $env:PROJECT_NAME
+          Branch: ${{ github.ref_name }}
+          Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        } | ConvertTo-Json -Depth 10
+        Invoke-RestMethod -Uri "$env:GOOGLE_CHAT_WEBHOOK_URL" -Method Post -Body $body
+      shell: pwsh
 
-      # Upload to Google Drive
-      - name: Upload to Google Drive
-        if: steps.nuget_pack.outcome == 'success'
-        uses: google-github-actions/upload-cloud-storage@v1
-        with:
-          credentials_json: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON }}
-          path: ${{ env.NUGET_OUTPUT }}/*.nupkg
-          destination: drive://1Ulvq7i1JIQqmBQZiTm0NLkTnhyD6avBr/
-          overwrite: true
+    - name: Pack NuGet Package
+      run: nuget pack YourProject.csproj -Properties Configuration=Release -OutputDirectory ./nupkgs
+      shell: pwsh
+      continue-on-error: false
+
+    - name: Notify Success - NuGet Pack
+      if: success()
+      run: |
+        $body = @{
+          text = "✅ NuGet Package Created!
+          Project: $env:PROJECT_NAME
+          Branch: ${{ github.ref_name }}
+          Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        } | ConvertTo-Json -Depth 10
+        Invoke-RestMethod -Uri "$env:GOOGLE_CHAT_WEBHOOK_URL" -Method Post -Body $body
+      shell: pwsh
+
+    - name: Upload to Google Drive
+      uses: Jodebu/upload-to-google-drive@v1
+      with:
+        target: './nupkgs'
+        credentials: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_KEY }}
+        folderId: '1Ulvq7i1JIQqmBQZiTm0NLkTnhyD6avBr'
+      continue-on-error: false
+
+    - name: Notify Success - Upload to Google Drive
+      if: success()
+      run: |
+        $body = @{
+          text = "✅ Uploaded to Google Drive Successfully!
+          Project: $env:PROJECT_NAME
+          Branch: ${{ github.ref_name }}
+          Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          🔗 Google Drive: https://drive.google.com/drive/u/0/folders/1Ulvq7i1JIQqmBQZiTm0NLkTnhyD6avBr"
+        } | ConvertTo-Json -Depth 10
+        Invoke-RestMethod -Uri "$env:GOOGLE_CHAT_WEBHOOK_URL" -Method Post -Body $body
+      shell: pwsh
+
+    - name: Notify Failure
+      if: failure()
+      run: |
+        $body = @{
+          text = "❌ Pipeline Failed!
+          Project: $env:PROJECT_NAME
+          Branch: ${{ github.ref_name }}
+          Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          Error: Package restore, build, or upload failed."
+        } | ConvertTo-Json -Depth 10
+        Invoke-RestMethod -Uri "$env:GOOGLE_CHAT_WEBHOOK_URL" -Method Post -Body $body
+      shell: pwsh

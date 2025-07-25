@@ -1,7 +1,7 @@
 name: NuGet Pack & Upload to Google Drive
 
 on:
-workflow_dispatch:
+  workflow_dispatch:
   push:
     branches:
       - master

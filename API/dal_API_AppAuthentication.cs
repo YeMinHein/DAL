@@ -10,8 +10,7 @@ using System.Threading.Tasks;
 
 namespace DAL.API
 {
-    //trts
-    public class dal_API_AppAuthentication
+      public class dal_API_AppAuthentication
     {
         string conn_str = dal_ConfigManager.GTG;
 

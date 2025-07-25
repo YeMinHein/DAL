@@ -47,6 +47,9 @@ jobs:
         $newVersion = "$major.$minor.$patch"
         Write-Output "New Version: $newVersion"
         echo "nuget_version=$newVersion" >> $env:GITHUB_ENV
+    
+    - name: Show NuGet Version
+      run: echo "NuGet Version is ${{ env.nuget_version }}"
 
     - name: Restore NuGet Packages
       run: nuget restore DAL.sln
@@ -66,3 +69,22 @@ jobs:
       with:
         name: NuGetPackage
         path: ./nupkgs/*.nupkg
+
+    - name: Create & Push Git Tag
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      shell: pwsh
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+
+        git fetch --tags
+        $newTag = "v$env:nuget_version"
+
+        if (git tag -l $newTag) {
+            Write-Output "Tag $newTag already exists. Skipping tag creation."
+        } else {
+            Write-Output "Creating and pushing tag $newTag"
+            git tag $newTag
+            git push origin $newTag
+        }

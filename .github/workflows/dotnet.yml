@@ -21,7 +21,15 @@ jobs:
       uses: microsoft/setup-msbuild@v1
 
     - name: Restore NuGet packages
+      id: Restore_nuget_pack
       run: nuget restore DAL.sln
+      continue-on-error: true
+    
+    - name: Notify Google Chat - Failure
+      if: steps.Restore_nuget_pack.outcome == 'failure'
+      run: |
+        $body = @{ text = "❌ Restore NuGet packages Failed!" } | ConvertTo-Json -Depth 10
+        Invoke-RestMethod -Uri "${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}" -Method Post -ContentType 'application/json' -Body $body
 
     - name: Build project (Release)
       run: msbuild DAL.csproj /p:Configuration=Release /p:Platform="Any CPU"

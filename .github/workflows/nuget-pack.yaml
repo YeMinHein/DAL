@@ -31,10 +31,10 @@ jobs:
           vs-version: 'latest'
 
       - name: Restore NuGet packages
-        run: nuget restore DAL/DAL.csproj
+        run: nuget restore DAL.csproj
 
       - name: Build the Project
-        run: msbuild DAL/DAL.csproj /p:Configuration=Release
+        run: msbuild DAL.csproj /p:Configuration=Release
 
       - name: Create output directory
         run: mkdir ${{ env.NUGET_OUTPUT }}

@@ -26,30 +26,30 @@ jobs:
     - name: Create Build Directory
       run: mkdir _build
 
-    - name: Calculate Version (Auto Increment)
-      id: versioning
-      shell: pwsh
-      run: |
-        $lastTag = git describe --tags --abbrev=0 2>$null
+    # - name: Calculate Version (Auto Increment)
+    #   id: versioning
+    #   shell: pwsh
+    #   run: |
+    #     $lastTag = git describe --tags --abbrev=0 2>$null
 
-        if ([string]::IsNullOrEmpty($lastTag)) {
-            Write-Output "No tags found. Defaulting to v1.0.0"
-            $lastTag = "v1.0.0"
-         }  else {
-            Write-Output "Last Tag: $lastTag"
-         }
+    #     if ([string]::IsNullOrEmpty($lastTag)) {
+    #         Write-Output "No tags found. Defaulting to v1.0.0"
+    #         $lastTag = "v1.0.0"
+    #      }  else {
+    #         Write-Output "Last Tag: $lastTag"
+    #      }
 
-        $versionParts = $lastTag.TrimStart('v').Split('.')
-        $major = [int]$versionParts[0]
-        $minor = [int]$versionParts[1]
-        $patch = [int]$versionParts[2] + 1
+    #     $versionParts = $lastTag.TrimStart('v').Split('.')
+    #     $major = [int]$versionParts[0]
+    #     $minor = [int]$versionParts[1]
+    #     $patch = [int]$versionParts[2] + 1
 
-        $newVersion = "$major.$minor.$patch"
-        Write-Output "New Version: $newVersion"
-        echo "nuget_version=$newVersion" >> $env:GITHUB_ENV
+    #     $newVersion = "$major.$minor.$patch"
+    #     Write-Output "New Version: $newVersion"
+    #     echo "nuget_version=$newVersion" >> $env:GITHUB_ENV
     
-    - name: Show NuGet Version
-      run: echo "NuGet Version is ${{ env.nuget_version }}"
+    # - name: Show NuGet Version
+      # run: echo "NuGet Version is ${{ env.nuget_version }}"
 
     - name: Restore NuGet Packages
       run: nuget restore DAL.sln

@@ -3,111 +3,90 @@ name: NuGet Pack & Upload to Google Drive (.NET Framework 4.8.1)
 on:
   push:
     branches:
-      - main
-  workflow_dispatch:
+      - main  # or 'master'
+    workflow_dispatch:
+    paths:
+      - 'DAL/**'
+      - '.github/workflows/nuget-pack.yml'
+
+env:
+  NUGET_OUTPUT: ./nupkgs
+  PACKAGE_VERSION: ${{ github.run_number }}.0.0  # Using run number as version
 
 jobs:
-  build-and-upload:
+  build-pack-publish:
     runs-on: windows-latest
-    env:
-      NUGET_PACKAGES: ${{ github.workspace }}/packages  # Local packages directory
 
     steps:
-    # 1. Checkout repository (including local packages)
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0  # Get all history to ensure packages are included
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    # 2. Setup build tools
-    - name: Setup NuGet
-      uses: NuGet/setup-nuget@v2
-      with:
-        nuget-version: '6.6.1'  # Specific stable version
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v2
+        with:
+          nuget-version: latest
 
-    - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v1
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+        with:
+          vs-version: 'latest'
 
-    # 3. Configure NuGet sources
-    - name: Add local package source
-      run: |
-        # Create local packages directory if it doesn't exist
-        if not exist "${{ github.workspace }}/local-packages" mkdir "${{ github.workspace }}/local-packages"
-        # Add source (pointing to either packages or local-packages folder)
-        nuget sources Add -Name "LocalPackages" -Source "${{ github.workspace }}/local-packages"
-        nuget sources list  # Verify sources
+      - name: Restore NuGet packages
+        run: nuget restore DAL/DAL.csproj
 
-    # 4. Restore packages (including local BOL package)
-    - name: Restore NuGet packages
-      run: |
-        nuget restore DAL.sln -Source "https://api.nuget.org/v3/index.json;LocalPackages"
-        # Verify BOL package was restored
-        if not exist "packages/BOL.1.0.0" (
-          echo "::error::BOL.1.0.0 package was not restored!"
-          exit 1
-        )
+      - name: Build the Project
+        run: msbuild DAL/DAL.csproj /p:Configuration=Release
 
-    # 5. Build solution
-    - name: Build solution (Release)
-      run: msbuild DAL.sln /p:Configuration=Release /p:Platform="Any CPU" /p:DeployOnBuild=true /p:RestorePackages=false
+      - name: Create output directory
+        run: mkdir ${{ env.NUGET_OUTPUT }}
 
-    # 6. Verify build outputs
-    - name: Verify build outputs
-      run: |
-        echo "Build outputs:"
-        dir /s /b bin\Release
-        if not exist "bin\Release\DAL.dll" (
-          echo "::error::DAL.dll was not built!"
-          exit 1
-        )
+      - name: Pack the Project
+        id: nuget_pack
+        run: |
+          nuget pack DAL/DAL.csproj -OutputDirectory ${{ env.NUGET_OUTPUT }} -Properties Configuration=Release -Version ${{ env.PACKAGE_VERSION }}
+          if ($LASTEXITCODE -eq 0) {
+            Write-Output "::set-output name=status::success"
+          } else {
+            Write-Output "::set-output name=status::failure"
+            exit 1
+          }
 
-    # 7. Create NuGet package
-    - name: Create NuGet package
-      id: nuget_pack
-      run: |
-        $version = "1.0.${{ github.run_number }}"
-        nuget pack DAL.csproj `
-          -OutputDirectory ./nupkgs `
-          -Properties "Configuration=Release" `
-          -Version $version `
-          -Symbols  # Include symbols if needed
-        echo "PACKAGE_VERSION=$version" >> $env:GITHUB_ENV
+      # Success notification
+      - name: Notify Google Chat - Success
+        if: steps.nuget_pack.outcome == 'success'
+        run: |
+          $package = Get-ChildItem ${{ env.NUGET_OUTPUT }}/*.nupkg | Select-Object -First 1
+          $body = @{
+            text = "✅ NuGet Package Created Successfully!
+            Project: DAL
+            Version: ${{ env.PACKAGE_VERSION }}
+            Package: $($package.Name)
+            Size: $([math]::Round($package.Length/1KB, 2)) KB
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Drive Link: https://drive.google.com/drive/u/0/folders/1Ulvq7i1JIQqmBQZiTm0NLkTnhyD6avBr"
+          } | ConvertTo-Json -Depth 10
+          Invoke-RestMethod -Uri "${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}" -Method Post -Body $body
 
-    # 8. Success notification
-    - name: Notify Google Chat - Success
-      if: steps.nuget_pack.outcome == 'success'
-      run: |
-        $package = Get-ChildItem ./nupkgs/*.nupkg | Select-Object -First 1
-        $body = @{
-          text = "✅ NuGet Package Created Successfully!
-          Project: DAL
-          Version: $env:PACKAGE_VERSION
-          Package: $($package.Name)
-          Size: $([math]::Round($package.Length/1KB, 2)) KB
-          Branch: ${{ github.ref_name }}
-          Commit: ${{ github.sha }}"
-        } | ConvertTo-Json -Depth 10
-        Invoke-RestMethod -Uri "${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}" -Method Post -Body $body
+      # Failure notification
+      - name: Notify Google Chat - Failure
+        if: steps.nuget_pack.outcome == 'failure'
+        run: |
+          $body = @{
+            text = "❌ NuGet Package Creation Failed!
+            Project: DAL
+            Branch: ${{ github.ref_name }}
+            Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            Error: Package restore or build failed"
+          } | ConvertTo-Json -Depth 10
+          Invoke-RestMethod -Uri "${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}" -Method Post -Body $body
 
-    # 9. Failure notification
-    - name: Notify Google Chat - Failure
-      if: steps.nuget_pack.outcome == 'failure'
-      run: |
-        $body = @{
-          text = "❌ NuGet Package Creation Failed!
-          Project: DAL
-          Branch: ${{ github.ref_name }}
-          Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          Error: BOL package restore or build failed"
-        } | ConvertTo-Json -Depth 10
-        Invoke-RestMethod -Uri "${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}" -Method Post -Body $body
-
-    # 10. Upload to Google Drive
-    - name: Upload to Google Drive
-      if: steps.nuget_pack.outcome == 'success'
-      uses: google-github-actions/upload-cloud-storage@v1
-      with:
-        credentials_json: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON }}
-        path: ./nupkgs/*.nupkg
-        destination: drive://1jN23YIU6aclDiZhFZliCLxzdW76-39fo/
-        overwrite: true
+      # Upload to Google Drive
+      - name: Upload to Google Drive
+        if: steps.nuget_pack.outcome == 'success'
+        uses: google-github-actions/upload-cloud-storage@v1
+        with:
+          credentials_json: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON }}
+          path: ${{ env.NUGET_OUTPUT }}/*.nupkg
+          destination: drive://1Ulvq7i1JIQqmBQZiTm0NLkTnhyD6avBr/
+          overwrite: true

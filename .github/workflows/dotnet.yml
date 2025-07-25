@@ -24,29 +24,29 @@ jobs:
       id: Restore_nuget_pack
       run: nuget restore DAL.sln
       continue-on-error: true
-    
-    - name: Notify Google Chat - Failure
+
+    - name: Notify Google Chat - Restore Failure
       if: steps.Restore_nuget_pack.outcome == 'failure'
       run: |
         $body = @{ text = "❌ Restore NuGet packages Failed!" } | ConvertTo-Json -Depth 10
         Invoke-RestMethod -Uri "${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}" -Method Post -ContentType 'application/json' -Body $body
 
-    - name: Build project (Release)
-      run: msbuild DAL.csproj /p:Configuration=Release /p:Platform="Any CPU"
+    - name: Build Solution (Release)
+      run: msbuild DAL.sln /p:Configuration=Release /p:Platform="Any CPU"
 
     - name: Run nuget pack
       id: nuget_pack
       run: |
         nuget pack DAL.csproj -OutputDirectory ./nupkgs -Properties Configuration=Release
       continue-on-error: true
-    
-    - name: Notify Google Chat - Success
+
+    - name: Notify Google Chat - Pack Success
       if: steps.nuget_pack.outcome == 'success'
       run: |
         $body = @{ text = "✅ NuGet Pack Success: DAL.nupkg created." } | ConvertTo-Json -Depth 10
         Invoke-RestMethod -Uri "${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}" -Method Post -ContentType 'application/json' -Body $body
 
-    - name: Notify Google Chat - Failure
+    - name: Notify Google Chat - Pack Failure
       if: steps.nuget_pack.outcome == 'failure'
       run: |
         $body = @{ text = "❌ DAL.nupkg Creation Failed!" } | ConvertTo-Json -Depth 10
